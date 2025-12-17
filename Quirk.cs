@@ -81,7 +81,7 @@ namespace VisibleLockerInterior {
                 case TechType.ExoHullModule2:
                 case TechType.FilteredWater:
                 case TechType.DisinfectedWater:
-                case TechType.StillsuitWater:
+                case TechType.WaterFiltrationSuit:
                 case TechType.BigFilteredWater:
                     return new Quaternion(1, 0, 0, 1);
                 case TechType.Knife:

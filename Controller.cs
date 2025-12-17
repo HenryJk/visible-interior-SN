@@ -18,23 +18,48 @@ namespace VisibleLockerInterior {
             var interior = GetInteriorInstance(sc);
             var items = GetSortedItems(sc.storageRoot.gameObject);
             var dummies = GetSortedDummies(interior);
-            for (int i = 0, j = 0; i < items.Count || j < dummies.Count;) {
-                var targetPosition =
-                    new Vector3(xPos[i % itemPerRow], yPos[i / itemPerRow], zPos);
+
+            // How this works:
+            // This algorithm relies on the fact that the real items and the dummies are
+            // fully sorted, just that it is not synchronized. We don't need to recreate
+            // every single item dummy on update, we can just move around already created
+            // dummies and deal with deletion and creation in case a new object has been
+            // lost / found.
+            var visible_item_count = Math.Min(items.Count, 48);
+            for (int i = 0, j = 0; i < visible_item_count || j < dummies.Count;) {
                 int cmp = 
-                    i == items.Count ? 1 :
+                    i == visible_item_count ? 1 :
                     j == dummies.Count ? -1 :
                     CompareTechType(
                         items[i].GetComponent<Pickupable>().GetTechType(),
                         dummies[j].GetComponent<VisibleLockerInteriorDummyData>().techType
                         );
+
+                // If items[i] should have preceded dummies[j] in sorted array, it means
+                // that the items array has a new member that is unaccounted by the dummies
+                // array, so new dummy has to be created and i is incremented.
                 if (cmp == -1) {
                     var dummy = CreateDummy(interior, items[i]);
-                    RepositionDummy(dummy.gameObject, targetPosition);
+                    RepositionDummy(
+                        dummy.gameObject,
+                        new Vector3(xPos[i % itemPerRow], yPos[i / itemPerRow], zPos)
+                        );
                     i++;
+
+                // If items[i] and dummies[j] is of equal precedence, then no new dummy
+                // should be created, just move dummies[j] to items[i]'s position and 
+                // increment both i and j.
                 } else if (cmp == 0) {
-                    RepositionDummy(dummies[j].gameObject, targetPosition);
+                    RepositionDummy(
+                        dummies[j].gameObject,
+                        new Vector3(xPos[i % itemPerRow], yPos[i / itemPerRow], zPos)
+                        );
                     i++; j++;
+
+                // If items[i] should have succeeded dummies[j] in sorted array, it means
+                // means that items array has a missing member compared to dummies array, so
+                // the dummies array has to delete dummies[j] to compensate and j is
+                // incremented
                 } else {
                     GameObject.Destroy(dummies[j].gameObject);
                     j++;
@@ -184,8 +209,8 @@ namespace VisibleLockerInterior {
         }
 
         private static int CompareTechType(TechType t1, TechType t2) {
-            var size1 = CraftData.GetItemSize(t1);
-            var size2 = CraftData.GetItemSize(t2);
+            var size1 = TechData.GetItemSize(t1);
+            var size2 = TechData.GetItemSize(t2);
             if (size1.Equals(size2)) return t1.CompareTo(t2);
             var l1 = Math.Max(size1.x, size1.y);
             var l2 = Math.Max(size2.x, size2.y);
